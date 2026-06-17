@@ -24,6 +24,7 @@ namespace TopdownSurvival.Level
         public int LevelCount => m_Levels != null ? m_Levels.Length : 0;
         public float RemainingTime => m_RemainingTime;
         public int Kills => m_Kills;
+        public int TotalKills => m_Save != null ? m_Save.Data.TotalEnemiesDefeated : 0;
         public bool HasNext => m_CurrentIndex + 1 < LevelCount;
 
         [Inject]
@@ -63,10 +64,13 @@ namespace TopdownSurvival.Level
             m_Bus.Raise(new LevelStartedEvent(index, m_Levels.Length));
         }
 
-        public void Stop()
+        public void Fail()
         {
             m_Running = false;
             m_Spawner.StopSpawning(true);
+
+            m_Save.AddKills(m_Kills);
+            m_Save.Save();
         }
 
         public void Tick(float deltaTime)

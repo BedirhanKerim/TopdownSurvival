@@ -22,7 +22,7 @@ namespace TopdownSurvival.States
         public void Enter()
         {
             m_Bus.SubscribeTo<NextLevelRequestedEvent>(OnNextRequested);
-            m_Ui.ShowGameWon();
+            m_Ui.ShowGameWon(m_Level.Kills, m_Level.TotalKills);
         }
 
         public void Tick(float deltaTime)

@@ -21,9 +21,9 @@ namespace TopdownSurvival.States
 
         public void Enter()
         {
-            m_Level.Stop();
+            m_Level.Fail();
             m_Bus.SubscribeTo<RetryRequestedEvent>(OnRetry);
-            m_Ui.ShowGameOver();
+            m_Ui.ShowGameOver(m_Level.Kills, m_Level.TotalKills);
         }
 
         public void Tick(float deltaTime)

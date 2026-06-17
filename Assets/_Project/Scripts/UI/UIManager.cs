@@ -16,10 +16,12 @@ namespace TopdownSurvival.UI
 
         [Header("Game Won")]
         [SerializeField] private GameObject m_WonPanel;
+        [SerializeField] private TMP_Text m_WonScoreText;
         [SerializeField] private Button m_NextButton;
 
         [Header("Game Over")]
         [SerializeField] private GameObject m_OverPanel;
+        [SerializeField] private TMP_Text m_OverScoreText;
         [SerializeField] private Button m_RetryButton;
 
         private GameEventBus m_Bus;
@@ -90,8 +92,13 @@ namespace TopdownSurvival.UI
             }
         }
 
-        public void ShowGameWon()
+        public void ShowGameWon(int kills, int total)
         {
+            if (m_WonScoreText != null)
+            {
+                m_WonScoreText.text = $"Defeated: {kills}\nTotal: {total}";
+            }
+
             if (m_WonPanel != null)
             {
                 m_WonPanel.SetActive(true);
@@ -100,8 +107,13 @@ namespace TopdownSurvival.UI
             Time.timeScale = 0f;
         }
 
-        public void ShowGameOver()
+        public void ShowGameOver(int kills, int total)
         {
+            if (m_OverScoreText != null)
+            {
+                m_OverScoreText.text = $"Defeated: {kills}\nTotal: {total}";
+            }
+
             if (m_OverPanel != null)
             {
                 m_OverPanel.SetActive(true);
