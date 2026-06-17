@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d84f55cbcf782ad4fb2b31b8d0262b1c, type: 3}
   m_Name: SO_LevelData2
   m_EditorClassIdentifier: Assembly-CSharp::TopdownSurvival.Level.LevelData
-  m_SurvivalDuration: 10
+  m_SurvivalDuration: 180
   m_WaveInterval: 5
   m_EnemiesPerWave: 16
   m_SpawnDistance: 14
