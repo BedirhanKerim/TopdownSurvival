@@ -1,6 +1,10 @@
+using System.Collections.Generic;
 using Lean.Pool;
+using TopdownSurvival.Core;
+using TopdownSurvival.Level;
 using UnityEngine;
 using UnityEngine.AI;
+using VContainer;
 
 namespace TopdownSurvival.Enemies
 {
@@ -10,12 +14,21 @@ namespace TopdownSurvival.Enemies
 
         [SerializeField] private EnemyHealth m_EnemyPrefab;
         [SerializeField] private Transform m_Player;
-        [SerializeField] private float m_SpawnInterval = 1.5f;
-        [SerializeField] private float m_SpawnRadius = 15f;
-        [SerializeField] private int m_MaxAlive = 20;
+        [SerializeField] private float m_DistanceJitter = 1.5f;
 
-        private int m_AliveCount;
+        private readonly HashSet<EnemyHealth> m_Active = new HashSet<EnemyHealth>();
+        private GameEventBus m_Bus;
+        private float m_WaveInterval = 5f;
+        private float m_SpawnDistance = 12f;
+        private int m_BatchSize = 12;
+        private bool m_Running;
         private float m_NextSpawnTime;
+
+        [Inject]
+        public void Construct(GameEventBus bus)
+        {
+            m_Bus = bus;
+        }
 
         private void Awake()
         {
@@ -25,30 +38,89 @@ namespace TopdownSurvival.Enemies
             }
         }
 
-        private void Update()
+        public void Configure(LevelData level)
         {
-            if (m_EnemyPrefab == null || m_Player == null)
+            if (level == null)
             {
                 return;
             }
 
-            if (m_AliveCount >= m_MaxAlive || Time.time < m_NextSpawnTime)
-            {
-                return;
-            }
-
-            m_NextSpawnTime = Time.time + m_SpawnInterval;
-            SpawnOne();
+            m_WaveInterval = level.WaveInterval;
+            m_SpawnDistance = level.SpawnDistance;
+            m_BatchSize = level.EnemiesPerWave;
         }
 
-        private void SpawnOne()
+        public void BeginSpawning()
         {
-            if (!TryGetSpawnPosition(out Vector3 position))
+            m_Running = true;
+            m_NextSpawnTime = 0f;
+        }
+
+        public void StopSpawning(bool clearAlive)
+        {
+            m_Running = false;
+
+            if (!clearAlive)
             {
                 return;
             }
 
-            EnemyHealth enemy = LeanPool.Spawn(m_EnemyPrefab, position, Quaternion.identity);
+            foreach (EnemyHealth enemy in m_Active)
+            {
+                if (enemy != null)
+                {
+                    enemy.Died -= OnEnemyDied;
+                    LeanPool.Despawn(enemy);
+                }
+            }
+
+            m_Active.Clear();
+        }
+
+        private void Update()
+        {
+            if (!m_Running || m_EnemyPrefab == null || m_Player == null)
+            {
+                return;
+            }
+
+            if (Time.time < m_NextSpawnTime)
+            {
+                return;
+            }
+
+            m_NextSpawnTime = Time.time + m_WaveInterval;
+            SpawnBatch();
+        }
+
+        private void SpawnBatch()
+        {
+            int count = m_BatchSize;
+            if (count <= 0)
+            {
+                return;
+            }
+
+            float angleStep = 360f / count;
+            float startAngle = Random.value * 360f;
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (startAngle + i * angleStep) * Mathf.Deg2Rad;
+                float distance = m_SpawnDistance + Random.Range(-m_DistanceJitter, m_DistanceJitter);
+                Vector3 candidate = m_Player.position + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * distance;
+                SpawnOne(candidate);
+            }
+        }
+
+        private void SpawnOne(Vector3 candidate)
+        {
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, k_NavSampleDistance, NavMesh.AllAreas))
+            {
+                return;
+            }
+
+            EnemyHealth enemy = LeanPool.Spawn(m_EnemyPrefab, hit.position, Quaternion.identity);
             if (enemy == null)
             {
                 return;
@@ -56,33 +128,20 @@ namespace TopdownSurvival.Enemies
 
             enemy.Died -= OnEnemyDied;
             enemy.Died += OnEnemyDied;
+            m_Active.Add(enemy);
 
             EnemyController controller = enemy.GetComponent<EnemyController>();
             if (controller != null)
             {
-                controller.Activate(position, m_Player);
+                controller.Activate(hit.position, m_Player);
             }
-
-            m_AliveCount++;
-        }
-
-        private bool TryGetSpawnPosition(out Vector3 position)
-        {
-            Vector2 circle = Random.insideUnitCircle * m_SpawnRadius;
-            Vector3 candidate = m_Player.position + new Vector3(circle.x, 0f, circle.y);
-            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, k_NavSampleDistance, NavMesh.AllAreas))
-            {
-                position = hit.position;
-                return true;
-            }
-
-            position = candidate;
-            return false;
         }
 
         private void OnEnemyDied(EnemyHealth enemy)
         {
-            m_AliveCount--;
+            m_Active.Remove(enemy);
+            Vector3 position = enemy != null ? enemy.transform.position : Vector3.zero;
+            m_Bus?.Raise(new EnemyKilledEvent(position));
         }
     }
 }

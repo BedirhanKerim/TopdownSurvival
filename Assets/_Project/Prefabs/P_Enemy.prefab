@@ -102,7 +102,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fddb6a33f917d64408966cabf32333dd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TopdownSurvival.Enemies.EnemyHealth
-  m_MaxHealth: 200
+  m_MaxHealth: 10
   m_Animator: {fileID: 217201779071740960}
   m_Agent: {fileID: 7241016166269724000}
   m_Collider: {fileID: 7920350469265997262}

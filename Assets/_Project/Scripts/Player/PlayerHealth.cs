@@ -1,6 +1,8 @@
 using System;
 using TopdownSurvival.Combat;
+using TopdownSurvival.Core;
 using UnityEngine;
+using VContainer;
 
 namespace TopdownSurvival.Player
 {
@@ -10,6 +12,7 @@ namespace TopdownSurvival.Player
         [SerializeField] private PlayerController m_Controller;
         [SerializeField] private PlayerWeapon m_Weapon;
 
+        private GameEventBus m_Bus;
         private float m_Health;
         private bool m_IsAlive = true;
 
@@ -18,9 +21,31 @@ namespace TopdownSurvival.Player
         public bool IsAlive => m_IsAlive;
         public float Health => m_Health;
 
+        [Inject]
+        public void Construct(GameEventBus bus)
+        {
+            m_Bus = bus;
+        }
+
         private void Awake()
         {
             m_Health = m_MaxHealth;
+        }
+
+        public void Revive()
+        {
+            m_Health = m_MaxHealth;
+            m_IsAlive = true;
+
+            if (m_Controller != null)
+            {
+                m_Controller.enabled = true;
+            }
+
+            if (m_Weapon != null)
+            {
+                m_Weapon.enabled = true;
+            }
         }
 
         public void TakeDamage(float amount)
@@ -54,6 +79,7 @@ namespace TopdownSurvival.Player
             }
 
             Died?.Invoke();
+            m_Bus?.Raise(new PlayerDiedEvent());
         }
     }
 }
